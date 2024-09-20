@@ -1,0 +1,31 @@
+###
+GET localhost:8080/helloUser
+Authorization: {{auth_token}}
+
+###
+GET localhost:8080/helloAdmin
+Authorization: {{auth_token}}
+
+###
+GET localhost:8080/helloUserAdmin
+Authorization: {{auth_token}}
+
+###
+GET localhost:8080/helloMe
+Authorization: {{auth_token}}
+
+###
+GET localhost:8080/helloWorld
+
+### login
+POST http://localhost:8080/login
+content-type: application/json
+
+{
+  "username": "josep",
+  "password": "password123"
+}
+> {%
+    client.global.set("auth_token", response.headers.valueOf("Authorization"));
+    client.log("token: " + response.headers.valueOf("Authorization"));
+%}
