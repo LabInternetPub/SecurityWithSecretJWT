@@ -1,4 +1,4 @@
-package cat.tecnocampus.securityjwt.security.auth;
+package cat.tecnocampus.securityjwt.security.authentication;
 
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;

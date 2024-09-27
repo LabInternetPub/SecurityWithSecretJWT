@@ -1,7 +1,6 @@
 package cat.tecnocampus.securityjwt.security.configuration;
 
-import cat.tecnocampus.securityjwt.security.auth.UserLabDetailsService;
-import org.springframework.boot.autoconfigure.security.servlet.PathRequest;
+import cat.tecnocampus.securityjwt.security.authentication.UserLabDetailsService;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.Customizer;
@@ -19,7 +18,7 @@ import static org.springframework.security.oauth2.core.authorization.OAuth2Autho
 @Configuration
 @EnableWebSecurity
 @EnableMethodSecurity
-public class SecurityConfiguration {
+public class SecurityConfigurationAuthorization {
 
     private final UserLabDetailsService userDetailsService;
     private final JwtDecoder jwtDecoder;
@@ -31,7 +30,7 @@ public class SecurityConfiguration {
             "/swagger-ui/**",
             "/swagger-ui.html"};
 
-    public SecurityConfiguration(UserLabDetailsService userDetailsService, JwtDecoder jwtDecoder) {
+    public SecurityConfigurationAuthorization(UserLabDetailsService userDetailsService, JwtDecoder jwtDecoder) {
         this.userDetailsService = userDetailsService;
         this.jwtDecoder = jwtDecoder;
     }

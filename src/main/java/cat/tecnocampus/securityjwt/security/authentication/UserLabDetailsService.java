@@ -1,4 +1,4 @@
-package cat.tecnocampus.securityjwt.security.auth;
+package cat.tecnocampus.securityjwt.security.authentication;
 
 import cat.tecnocampus.securityjwt.domain.UserLab;
 import cat.tecnocampus.securityjwt.persistence.UserLabRepository;
