@@ -1,6 +1,5 @@
-package cat.tecnocampus.securityjwt.security.configuration;
+package cat.tecnocampus.securityjwt.security.authentication;
 
-import cat.tecnocampus.securityjwt.security.authentication.UserLabDetailsService;
 import com.nimbusds.jose.jwk.source.ImmutableSecret;
 import com.nimbusds.jose.jwk.source.JWKSource;
 import com.nimbusds.jose.proc.SecurityContext;

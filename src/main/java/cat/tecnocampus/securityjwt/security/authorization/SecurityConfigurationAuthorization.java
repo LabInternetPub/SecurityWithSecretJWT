@@ -1,4 +1,4 @@
-package cat.tecnocampus.securityjwt.security.configuration;
+package cat.tecnocampus.securityjwt.security.authorization;
 
 import cat.tecnocampus.securityjwt.security.authentication.UserLabDetailsService;
 import org.springframework.context.annotation.Bean;

@@ -46,8 +46,6 @@ public class AuthenticationService {
   public String generateToken(Authentication authentication) {
     Instant now = Instant.now();
 
-    System.out.println("Authorities: " + authentication.getAuthorities()
-            .stream().map(GrantedAuthority::getAuthority).toList());
     String scope = authentication.getAuthorities()
             .stream()
             .map(GrantedAuthority::getAuthority)
