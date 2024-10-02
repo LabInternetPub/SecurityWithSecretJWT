@@ -19,8 +19,6 @@ import static org.springframework.security.oauth2.core.authorization.OAuth2Autho
 @EnableWebSecurity
 @EnableMethodSecurity
 public class SecurityConfigurationAuthorization {
-
-    private final UserLabDetailsService userDetailsService;
     private final JwtDecoder jwtDecoder;
     private static final String[] WHITE_LIST_URL = {
             "/login",
@@ -30,8 +28,7 @@ public class SecurityConfigurationAuthorization {
             "/swagger-ui/**",
             "/swagger-ui.html"};
 
-    public SecurityConfigurationAuthorization(UserLabDetailsService userDetailsService, JwtDecoder jwtDecoder) {
-        this.userDetailsService = userDetailsService;
+    public SecurityConfigurationAuthorization(JwtDecoder jwtDecoder) {
         this.jwtDecoder = jwtDecoder;
     }
 
