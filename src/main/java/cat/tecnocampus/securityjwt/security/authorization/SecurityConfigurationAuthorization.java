@@ -33,11 +33,11 @@ public class SecurityConfigurationAuthorization {
     }
 
     @Bean
-    public SecurityFilterChain filterChain(HttpSecurity http, HandlerMappingIntrospector introspector) throws Exception {
+    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
 
         return http
                 .cors(cors -> cors.disable())
-                .csrf(csrf -> csrf.disable()) //This is to disable the csrf protection. It is not needed for this project since the application is satateless (and we are using JWT)
+                .csrf(csrf -> csrf.disable()) //This is to disable the csrf protection. It is not needed for this project since the application is stateless (and we are using JWT)
                 .headers(headers -> headers.frameOptions(frameOptions -> frameOptions
                         .sameOrigin()))   // This is to allow the h2-console to be used in the browser. It allows the browser to render the response in a frame.
                 .authorizeHttpRequests(auth -> {

@@ -1,5 +1,15 @@
-# Spring Security
+# Spring Security with Json Web Tokens (JWT)
+## Credits
+This example is based on [Dan Vega's tutorial](https://www.danvega.dev/blog/spring-security-jwt). He introduces security with JWT and using the Spring Security OAUTH2 Resource
+Server instead of programming a Security Filter for the JWT from scratch as many tutorials (incorrectly) do. 
 
+This example has two main differences with the Dan Vega's tutorial:
+* Here, we store the users in the **database** instead of using an *InMemoryUserDetailsManager* which stores users in memory. 
+* We use the **HS512** algorithm to sign the JWT token instead of the *RS256* algorithm. The HS512 algorithm uses a single secret key to sign the token, 
+while the RS256 algorithm uses a pair of public and private keys. The RS256 algorithm is more secure because the private key is never shared, but it is more complex to implement. 
+The HS512 algorithm is simpler and is enough for this example.
+
+## The Example
 This example introduces the basic concepts of Spring Security. It uses JSON Web Tokens (JWT), and you can [read about this
 sort of token](https://jwt.io/introduction/). Since REST APIs are stateless, we need to use
 a mechanism to authenticate and authorize the user in each request. JWT is an encrypted token containing the user's information
