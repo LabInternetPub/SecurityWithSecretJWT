@@ -32,6 +32,12 @@ public class SecurityConfigurationAuthorization {
         this.jwtDecoder = jwtDecoder;
     }
 
+    //TODO add configuration so that
+    // 1. /moderator and all the endpoints beginning with /moderator are accessible only by users with the role "MODERATOR"
+    // 2. /moderator/whatever/admin are accessible by users with the role "ADMIN" (and also "MODERATOR"). "Whatever" is a single path element that can be anything.
+    //    For example, /moderator/aaa/admin, /moderator/bbb/admin, /moderator/ccc/admin, are all accessible by users with the role "ADMIN" (and also "MODERATOR")
+    //    but /moderator/aaa/bbb/admin is not accessible by users with the role "ADMIN" (Moderators can)
+
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
 
