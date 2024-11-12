@@ -1,7 +1,6 @@
 package cat.tecnocampus.securityjwt.api;
 
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.security.Principal;
 
@@ -68,6 +67,13 @@ public class APIController {
     public String moderatorCccAdmin() {
         return "moderator/ccc/admin";
     }
+
+    @PostMapping("/moderator")
+    public String moderator2(@RequestParam String type, @RequestParam() String name) {
+        return "moderator";
+    }
+
+    //loccalhost:8080/moderator?role=ADMIN&name=pepe
 
     // TODO 2 add a PostMapping to create a new user with a single role. The role must be ADMIN or USER or MODERATOR
 }

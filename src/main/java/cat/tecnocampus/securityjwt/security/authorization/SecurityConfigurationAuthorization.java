@@ -12,6 +12,7 @@ import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.web.servlet.handler.HandlerMappingIntrospector;
 
+import static org.springframework.security.authorization.AuthorityAuthorizationManager.hasRole;
 import static org.springframework.security.oauth2.core.authorization.OAuth2AuthorizationManagers.hasAnyScope;
 import static org.springframework.security.oauth2.core.authorization.OAuth2AuthorizationManagers.hasScope;
 
@@ -21,7 +22,7 @@ import static org.springframework.security.oauth2.core.authorization.OAuth2Autho
 public class SecurityConfigurationAuthorization {
     private final JwtDecoder jwtDecoder;
     private static final String[] WHITE_LIST_URL = {
-            "/login",
+            "/login", "/token",
             "/h2-console/**",
             "/webjars/**",
             "/v3/api-docs/**", //this is for swagger

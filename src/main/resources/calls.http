@@ -18,11 +18,11 @@ Authorization: {{auth_token}}
 GET localhost:8080/helloWorld
 
 ### login
-POST http://localhost:8080/login
+POST http://localhost:8080/token
 content-type: application/json
 
 {
-  "username": "josep",
+  "username": "maria",
   "password": "password123"
 }
 > {%

@@ -18,7 +18,7 @@ public class AuthenticationController {
     this.authenticationService = service;
   }
 
-  @PostMapping("/login")
+  @PostMapping("/token")
   public ResponseEntity<AuthenticationResponse> authenticate(@RequestBody AuthenticationRequest request) {
     AuthenticationResponse response = authenticationService.authenticate(request);
 
