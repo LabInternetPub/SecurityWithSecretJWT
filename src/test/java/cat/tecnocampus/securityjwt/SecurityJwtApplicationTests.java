@@ -28,7 +28,7 @@ class SecurityJwtApplicationTests {
     }
 
     @Test
-    @WithMockUser(username = "maria", authorities = {"SCOPE_ADMIN", "SCOPE_USER"})
+    @WithMockUser(username = "pepe", authorities = {"SCOPE_ADMIN", "SCOPE_USER"})
     void helloAdmin() throws Exception {
         mockMvc.perform(get("/helloAdmin"))
                 .andExpect(status().isOk())
@@ -39,7 +39,7 @@ class SecurityJwtApplicationTests {
     }
 
     @Test
-    @WithMockUser(username = "maria", authorities = {"SCOPE_ADMIN"})
+    @WithUserDetails(value="maria", userDetailsServiceBeanName="userLabDetailsService")
     void helloUserFromAdmin() throws Exception {
         mockMvc.perform(get("/helloUser"))
                 .andExpect(status().isForbidden());
