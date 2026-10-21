@@ -1,7 +1,6 @@
 package cat.tecnocampus.securityjwt.security.authentication;
 
-import org.springframework.security.authentication.AuthenticationManager;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.oauth2.jose.jws.MacAlgorithm;
@@ -11,54 +10,45 @@ import org.springframework.security.oauth2.jwt.JwtEncoder;
 import org.springframework.security.oauth2.jwt.JwtEncoderParameters;
 import org.springframework.stereotype.Service;
 
+import java.time.Duration;
 import java.time.Instant;
-import java.time.temporal.ChronoUnit;
-import java.util.stream.Collectors;
-
+import java.util.List;
+import java.util.UUID;
 
 @Service
 public class AuthenticationService {
-  private final AuthenticationManager authenticationManager;
   private final JwtEncoder jwtEncoder;
+  private final Duration expiration;
 
-  public AuthenticationService(AuthenticationManager authenticationManager, JwtEncoder jwtEncoder) {
-    this.authenticationManager = authenticationManager;
+  public AuthenticationService(JwtEncoder jwtEncoder,
+                               @Value("${application.security.jwt.expiration}") Duration expiration) {
     this.jwtEncoder = jwtEncoder;
+    this.expiration = expiration;
   }
 
-  public AuthenticationResponse authenticate(AuthenticationRequest request) {
-    Authentication authentication = authenticationManager.authenticate(
-        new UsernamePasswordAuthenticationToken(
-            request.username(),
-            request.password()
-        )
-    );
-
-    var jwtToken = generateToken(authentication);
-    AuthenticationResponse response = new AuthenticationResponse();
-    response.setAccessToken(jwtToken);
-
-    return response;
+  public AuthenticationResponse issueToken(Authentication authentication) {
+    return new AuthenticationResponse(generateToken(authentication), "Bearer", expiration.toSeconds());
   }
 
   public String generateToken(Authentication authentication) {
     Instant now = Instant.now();
-
-    String scope = authentication.getAuthorities()
-            .stream()
+    List<String> roles = authentication.getAuthorities().stream()
             .map(GrantedAuthority::getAuthority)
-            .collect(Collectors.joining(" "));
+            .filter(authority -> authority.startsWith("ROLE_"))   // Spring Security 7 also adds FACTOR_PASSWORD
+            .toList();
 
     JwtClaimsSet claims = JwtClaimsSet.builder()
-            .issuer("self")
-            .issuedAt(now)
-            .expiresAt(now.plus(10, ChronoUnit.HOURS))
+            .issuer(SecurityConfigurationBeans.ISSUER)
+            .audience(List.of(SecurityConfigurationBeans.AUDIENCE))
             .subject(authentication.getName())
-            .claim("scope", scope)
+            .issuedAt(now)
+            .expiresAt(now.plus(expiration))
+            .id(UUID.randomUUID().toString())
+            .claim("client_id", "securityjwt-login")
+            .claim("roles", roles)
             .build();
 
-    var encoderParameters = JwtEncoderParameters.from(JwsHeader.with(MacAlgorithm.HS512).build(), claims);
-    return jwtEncoder.encode(encoderParameters).getTokenValue();
+    var header = JwsHeader.with(MacAlgorithm.HS512).type("at+jwt").build();
+    return jwtEncoder.encode(JwtEncoderParameters.from(header, claims)).getTokenValue();
   }
-
 }

@@ -85,7 +85,6 @@ public class UserLab {
                 "id=" + id +
                 ", username='" + username + '\'' +
                 ", email='" + email + '\'' +
-                ", password='" + password + '\'' +
                 ", roles=" + roles +
                 '}';
     }

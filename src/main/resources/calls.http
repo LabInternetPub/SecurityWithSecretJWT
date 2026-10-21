@@ -1,31 +1,27 @@
 ###
-GET localhost:8080/helloUser
-Authorization: {{auth_token}}
+GET http://localhost:8080/helloUser
+Authorization: Bearer {{auth_token}}
 
 ###
-GET localhost:8080/helloAdmin
-Authorization: {{auth_token}}
+GET http://localhost:8080/helloAdmin
+Authorization: Bearer {{auth_token}}
 
 ###
-GET localhost:8080/helloUserAdmin
-Authorization: {{auth_token}}
+GET http://localhost:8080/helloUserAdmin
+Authorization: Bearer {{auth_token}}
 
 ###
-GET localhost:8080/helloMe
-Authorization: {{auth_token}}
+GET http://localhost:8080/helloMe
+Authorization: Bearer {{auth_token}}
 
 ###
-GET localhost:8080/helloWorld
+GET http://localhost:8080/helloWorld
 
-### login
+### login (HTTP Basic: the client encodes "maria:password123" in Base64)
 POST http://localhost:8080/token
-content-type: application/json
+Authorization: Basic maria password123
 
-{
-  "username": "maria",
-  "password": "password123"
-}
 > {%
-    client.global.set("auth_token", response.headers.valueOf("Authorization"));
-    client.log("token: " + response.headers.valueOf("Authorization"));
+    client.global.set("auth_token", response.body.access_token);
+    client.log("token: " + response.body.access_token);
 %}

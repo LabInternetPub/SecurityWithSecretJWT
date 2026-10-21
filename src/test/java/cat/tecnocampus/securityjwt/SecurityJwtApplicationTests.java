@@ -2,18 +2,19 @@ package cat.tecnocampus.securityjwt;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.security.test.context.support.WithMockUser;
-import org.springframework.security.test.context.support.WithUserDetails;
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
+import org.springframework.http.MediaType;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.test.web.servlet.MockMvc;
 
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.httpBasic;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-@SpringBootTest
+@SpringBootTest(properties = "JWT_SECRET=dGVzdC1vbmx5LWtleS10ZXN0LW9ubHkta2V5LXRlc3Qtb25seS1rZXktdGVzdC1vbmx5LWtleS0xMjM0NTY3OA==")
 @AutoConfigureMockMvc
 class SecurityJwtApplicationTests {
 
@@ -21,28 +22,37 @@ class SecurityJwtApplicationTests {
     MockMvc mockMvc;
 
     @Test
-    void helloWorld() throws Exception {
-        mockMvc.perform(get("/helloWorld"))
-                .andExpect(status().isOk())
-                .andExpect(content().string("Hello World"));
+    void helloWorldIsPublic() throws Exception {
+        mockMvc.perform(get("/helloWorld")).andExpect(status().isOk());
     }
 
     @Test
-    @WithMockUser(username = "pepe", authorities = {"SCOPE_ADMIN", "SCOPE_USER"})
-    void helloAdmin() throws Exception {
-        mockMvc.perform(get("/helloAdmin"))
-                .andExpect(status().isOk())
-                .andExpect(content().string("Hello Admin"));
-       mockMvc.perform(get("/helloUser"))
-                .andExpect(status().isOk())
-                .andExpect(content().string("Hello User"));
-    }
-
-    @Test
-    @WithUserDetails(value="maria", userDetailsServiceBeanName="userLabDetailsService")
-    void helloUserFromAdmin() throws Exception {
-        mockMvc.perform(get("/helloUser"))
+    void adminEndpointRequiresAdminRole() throws Exception {
+        mockMvc.perform(get("/helloAdmin").with(jwt().authorities(new SimpleGrantedAuthority("ROLE_USER"))))
                 .andExpect(status().isForbidden());
+        mockMvc.perform(get("/helloAdmin").with(jwt().authorities(new SimpleGrantedAuthority("ROLE_ADMIN"))))
+                .andExpect(status().isOk());
     }
 
+    @Test
+    void anonymousIsRejected() throws Exception {
+        mockMvc.perform(get("/helloUser")).andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void loginIssuesTokenAndTokenGrantsAccess() throws Exception {
+        String body = mockMvc.perform(post("/token").with(httpBasic("maria", "password123")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.token_type").value("Bearer"))
+                .andReturn().getResponse().getContentAsString();
+        String token = body.replaceAll(".*\"access_token\":\"([^\"]+)\".*", "$1");
+        mockMvc.perform(get("/helloUser").header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    void badCredentialsReturnProblemDetail() throws Exception {
+        mockMvc.perform(post("/token").with(httpBasic("maria", "wrong")))
+                .andExpect(status().isUnauthorized());
+    }
 }

@@ -16,7 +16,7 @@ public class UserLabDetails implements UserDetails {
         this.userLab = userLab;
 
         this.authorities = userLab.getRoles().stream()
-                .map(role -> new SimpleGrantedAuthority(role.getName().name()))
+                .map(role -> new SimpleGrantedAuthority("ROLE_" + role.getName().name()))
                 .collect(Collectors.toList());
     }
 
@@ -58,11 +58,7 @@ public class UserLabDetails implements UserDetails {
 
     @Override
     public String toString() {
-        return "UserLab{" +
-                ", username='" + getUsername() + '\'' +
-                ", password='" + getPassword() + '\'' +
-                ", roles=" + authorities.toString() +
-                '}';
+        return "UserLabDetails{username='" + getUsername() + "', roles=" + authorities + "}";
     }
 
 }
