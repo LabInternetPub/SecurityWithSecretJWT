@@ -14,14 +14,59 @@ The HS512 algorithm is simpler and is enough for this example.
 Versions: Spring Boot 4.1.1 (Spring Security 7.1.1), Java 17 or later.
 
 ## Running the example
-The secret key used to sign the tokens is **not** stored in the repository. It is read from the environment variable `JWT_SECRET`, which must contain
-at least 64 random bytes encoded in Base64 (HS512 needs a key of at least 512 bits). The application does not start without it.
+The secret key used to sign the tokens is **not** stored in the repository: anyone who knows it can create valid tokens for any user and role.
+It is read from the environment variable `JWT_SECRET`, which must contain at least 64 random bytes encoded in Base64
+(HS512 needs a key of at least 512 bits). 64 bytes in Base64 is a string of **88 characters** without line breaks.
+The application does not start if the variable is missing (`Could not resolve placeholder 'JWT_SECRET'`) or if the key is shorter than
+64 bytes (`HS512 requires a key of at least 512 bits (64 bytes)`).
+
+Each student must generate their own secret. Do not copy a secret from a tutorial or from a classmate.
+
+### Linux and macOS (bash or zsh)
+Generate the secret and set it for the current terminal:
 ```bash
 export JWT_SECRET=$(openssl rand -base64 64 | tr -d '\n')
+echo ${#JWT_SECRET}          # must print 88
 ./mvnw spring-boot:run
 ```
-In IntelliJ, add `JWT_SECRET=<value>` in *Run configuration → Environment variables*. Note the `tr -d '\n'`: `openssl` splits its output in lines
-and a line break is not a valid Base64 character. The tests use their own key, so `./mvnw test` works without the variable.
+The `tr -d '\n'` is necessary: `openssl` splits its output in lines of 64 characters, and a line break is not a valid Base64 character
+(the application would fail with `Illegal base64 character a`). If `openssl` is not installed, use
+`head -c 64 /dev/urandom | base64 | tr -d '\n'` instead.
+
+To keep the same secret in every new terminal, generate it once and add it to your shell configuration file
+(`~/.bashrc` for bash, `~/.zshrc` for zsh):
+```bash
+echo "export JWT_SECRET='$(openssl rand -base64 64 | tr -d '\n')'" >> ~/.bashrc
+source ~/.bashrc
+```
+
+### Windows (PowerShell)
+Generate the secret and set it for the current PowerShell window:
+```powershell
+$bytes = New-Object byte[] 64
+[System.Security.Cryptography.RandomNumberGenerator]::Create().GetBytes($bytes)
+$env:JWT_SECRET = [Convert]::ToBase64String($bytes)
+$env:JWT_SECRET.Length       # must print 88
+.\mvnw.cmd spring-boot:run
+```
+This works in Windows PowerShell 5.1 and in PowerShell 7. `ToBase64String` does not insert line breaks.
+
+To keep the same secret for your user (it is stored in the registry), run after the commands above:
+```powershell
+setx JWT_SECRET $env:JWT_SECRET
+```
+`setx` only affects windows and programs started **afterwards**: open a new terminal and restart IntelliJ.
+
+In the classic command prompt (`cmd.exe`), generate the value with PowerShell as above and set it with
+`set JWT_SECRET=<value>` (no quotes, no spaces around `=`), then run `mvnw.cmd spring-boot:run`.
+
+### IntelliJ IDEA
+IntelliJ does not read your shell configuration files when it is started from the desktop. Add the variable to the run configuration:
+*Run → Edit Configurations… → SecurityJwtApplication → Environment variables* → `JWT_SECRET=<value>`.
+
+### Notes
+* Changing the secret invalidates all the tokens issued before: their signature no longer verifies, so clients must log in again.
+* The tests use their own key (see `SecurityJwtApplicationTests`), so `./mvnw test` (or `.\mvnw.cmd test`) works without the variable.
 
 All the users in `data.sql` have the password `password123`. Use `src/main/resources/calls.http` to log in and call the endpoints.
 
@@ -55,7 +100,8 @@ In order to use Spring Security, we need to add the following dependency to the 
             <artifactId>spring-boot-starter-security-oauth2-resource-server</artifactId>
         </dependency>
 ```
-Note that we use a part of the OAuth2 protocol that uses JWT tokens instead of the `spring-boot-starter-security` dependency.
+Note that this starter adds the part of the OAuth2 protocol that validates JWT tokens (the *resource server*) and already includes the
+`spring-boot-starter-security` dependency, so we do not need to add it.
 Once we have added the dependency, we need to configure the security. The configuration is placed in the security package. The authentication is defined
 in the authentication package, and contains the following classes:
 * **'AuthenticationController'** is a REST controller with the endpoint `POST /token`. The client sends the username and password in the
