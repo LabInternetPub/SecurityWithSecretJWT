@@ -1,5 +1,6 @@
 package cat.tecnocampus.securityjwt.api;
 
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.security.Principal;
@@ -30,6 +31,14 @@ public class APIController {
     @GetMapping("/helloMe")
     public String helloMe(Principal principal) {
         return "Hello " + principal.getName();
+    }
+
+    // Method security (@EnableMethodSecurity): the rule depends on the request data, which a URL rule cannot express.
+    // ADMIN can read the greeting of any user; any other user only their own (/hello/josep for josep).
+    @GetMapping("/hello/{username}")
+    @PreAuthorize("hasRole('ADMIN') or #username == authentication.name")
+    public String helloUsername(@PathVariable String username) {
+        return "Hello " + username;
     }
 
     // getMapping /moderator returning the url

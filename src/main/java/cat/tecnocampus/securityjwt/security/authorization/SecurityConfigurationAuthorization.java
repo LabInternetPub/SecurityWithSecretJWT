@@ -3,12 +3,14 @@ package cat.tecnocampus.securityjwt.security.authorization;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.annotation.Order;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.HttpStatusEntryPoint;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
@@ -27,6 +29,8 @@ public class SecurityConfigurationAuthorization {
     // 2. /moderator/whatever/admin are accessible by users with the role "ADMIN" (and also "MODERATOR"). "Whatever" is a single path element that can be anything.
     //    For example, /moderator/aaa/admin, /moderator/bbb/admin, /moderator/ccc/admin, are all accessible by users with the role "ADMIN" (and also "MODERATOR")
     //    but /moderator/aaa/bbb/admin is not accessible by users with the role "ADMIN" (Moderators can)
+    // NOTE: the API chain ends with anyRequest().denyAll(). Until you add the rules for /moderator, every /moderator
+    //    endpoint answers 403 (401 without a token). Your rules must be placed BEFORE anyRequest(): the first matching rule wins.
 
     // Login chain: only /token. The client sends "Authorization: Basic base64(username:password)"
     // and Spring Security checks it (UserLabDetailsService + PasswordEncoder) before the controller runs.
@@ -35,10 +39,12 @@ public class SecurityConfigurationAuthorization {
     SecurityFilterChain tokenFilterChain(HttpSecurity http) throws Exception {
         return http
                 .securityMatcher("/token")
+                .cors(Customizer.withDefaults())   // a browser application (SPA) in another origin calls /token too
                 .csrf(csrf -> csrf.disable())
                 .authorizeHttpRequests(auth -> auth.anyRequest().authenticated())
                 .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                .httpBasic(Customizer.withDefaults())
+                // Wrong credentials: plain 401 without "WWW-Authenticate: Basic", so that the browser does not show its own login dialog
+                .httpBasic(basic -> basic.authenticationEntryPoint(new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED)))
                 .build();
     }
 
@@ -57,7 +63,11 @@ public class SecurityConfigurationAuthorization {
                         .requestMatchers("/helloUser").hasRole("USER")
                         .requestMatchers("/helloAdmin").hasRole("ADMIN")
                         .requestMatchers("/helloUserAdmin").hasAnyRole("USER", "ADMIN")
-                        .anyRequest().authenticated())
+                        .requestMatchers("/helloMe").authenticated()
+                        .requestMatchers("/hello/*").authenticated()   // the role is checked in the controller with @PreAuthorize
+                        // Default rule: any endpoint without an explicit rule is denied (fail closed).
+                        // A new endpoint is not reachable until a rule is added for it.
+                        .anyRequest().denyAll())
                 .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .oauth2ResourceServer(oauth2 -> oauth2.jwt(Customizer.withDefaults()))  // uses the JwtDecoder and JwtAuthenticationConverter beans
                 .build();

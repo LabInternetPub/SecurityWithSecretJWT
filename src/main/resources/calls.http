@@ -14,6 +14,14 @@ Authorization: Bearer {{auth_token}}
 GET http://localhost:8080/helloMe
 Authorization: Bearer {{auth_token}}
 
+### method security: ADMIN can read anyone, other users only their own username
+GET http://localhost:8080/hello/josep
+Authorization: Bearer {{auth_token}}
+
+### denied by the default rule until the /moderator rules are added (TODO)
+GET http://localhost:8080/moderator/aaa
+Authorization: Bearer {{auth_token}}
+
 ###
 GET http://localhost:8080/helloWorld
 

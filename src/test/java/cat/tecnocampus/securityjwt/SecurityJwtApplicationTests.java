@@ -11,6 +11,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.httpBasic;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.options;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
@@ -51,8 +52,41 @@ class SecurityJwtApplicationTests {
     }
 
     @Test
-    void badCredentialsReturnProblemDetail() throws Exception {
+    void badCredentialsReturn401WithoutBasicChallenge() throws Exception {
+        // No "WWW-Authenticate: Basic" header, so a browser does not open its own login dialog
         mockMvc.perform(post("/token").with(httpBasic("maria", "wrong")))
-                .andExpect(status().isUnauthorized());
+                .andExpect(status().isUnauthorized())
+                .andExpect(header().doesNotExist("WWW-Authenticate"));
+    }
+
+    @Test
+    void browserApplicationCanCallTokenEndpoint() throws Exception {
+        mockMvc.perform(options("/token")
+                        .header("Origin", "http://localhost:5173")
+                        .header("Access-Control-Request-Method", "POST")
+                        .header("Access-Control-Request-Headers", "authorization"))
+                .andExpect(status().isOk())
+                .andExpect(header().string("Access-Control-Allow-Origin", "http://localhost:5173"));
+        mockMvc.perform(options("/token")
+                        .header("Origin", "http://evil.example")
+                        .header("Access-Control-Request-Method", "POST"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void endpointsWithoutRuleAreDenied() throws Exception {
+        // /moderator/** has no rule yet (TODO): denyAll() applies, even to ADMIN
+        mockMvc.perform(get("/moderator/aaa")).andExpect(status().isUnauthorized());
+        mockMvc.perform(get("/moderator/aaa").with(jwt().authorities(new SimpleGrantedAuthority("ROLE_ADMIN"))))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void helloUsernameUsesMethodSecurity() throws Exception {
+        var josep = jwt().jwt(token -> token.subject("josep")).authorities(new SimpleGrantedAuthority("ROLE_USER"));
+        mockMvc.perform(get("/hello/josep").with(josep)).andExpect(status().isOk());
+        mockMvc.perform(get("/hello/maria").with(josep)).andExpect(status().isForbidden());
+        var admin = jwt().jwt(token -> token.subject("jordi")).authorities(new SimpleGrantedAuthority("ROLE_ADMIN"));
+        mockMvc.perform(get("/hello/maria").with(admin)).andExpect(status().isOk());
     }
 }

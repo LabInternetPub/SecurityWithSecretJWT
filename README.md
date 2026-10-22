@@ -66,9 +66,19 @@ IntelliJ does not read your shell configuration files when it is started from th
 
 ### Notes
 * Changing the secret invalidates all the tokens issued before: their signature no longer verifies, so clients must log in again.
-* The tests use their own key (see `SecurityJwtApplicationTests`), so `./mvnw test` (or `.\mvnw.cmd test`) works without the variable.
+* The tests use their own key (see `SecurityJwtApplicationTests` and `TokenValidationTests`), so `./mvnw test` (or `.\mvnw.cmd test`) works without the variable.
 
 All the users in `data.sql` have the password `password123`. Use `src/main/resources/calls.http` to log in and call the endpoints.
+
+### HTTPS
+In this example the server uses plain HTTP (`http://localhost:8080`). That is acceptable on your own computer, but in any real deployment
+the API **must** be served over HTTPS (TLS): with HTTP Basic the password travels in every login request only Base64-encoded (not encrypted),
+and anyone who can read the traffic can also copy the access token and use it until it expires.
+
+### H2 console
+The H2 console (http://localhost:8080/h2-console, JDBC URL `jdbc:h2:mem:testdb`, user `sa`, password `password`) gives full read and write access to the database:
+users, password hashes and roles. It only accepts connections from your own computer (`spring.h2.console.settings.web-allow-others=false`).
+Never change that setting to `true`.
 
 ## The Example
 This example introduces the basic concepts of Spring Security. It uses JSON Web Tokens (JWT), and you can [read about this
@@ -128,7 +138,9 @@ in the authentication package, and contains the following classes:
 The **authorization** is defined in the authorization package, and only contains the class **'SecurityConfigurationAuthorization'** where two beans of
 type SecurityFilterChain are defined. As you can see in the next section, security in Spring contains a chain of filters that intercepts the requests
 to the server and carries all the security checks before the request reaches the Rest controller. A request is handled by the first chain (lowest `@Order`) whose `securityMatcher` matches it:
-* **tokenFilterChain** (`@Order(1)`) only handles `/token`. It accepts HTTP Basic credentials. 
+* **tokenFilterChain** (`@Order(1)`) only handles `/token`. It accepts HTTP Basic credentials. It also applies the CORS configuration, so that a browser
+  application in another origin can log in, and it answers wrong credentials with a plain 401, without the header `WWW-Authenticate: Basic`
+  (with that header, the browser would open its own login dialog).
 * **filterChain** (`@Order(2)`) handles all the other requests. It only accepts JWT tokens (`Authorization: Bearer ...`); HTTP Basic is not accepted here.
 
 The second filter configures other security characteristics apart from the authorization rights for each endpoint. Namely, it defines:
@@ -149,6 +161,10 @@ The second filter configures other security characteristics apart from the autho
   with the path of the request and the permissions the user needs to access the resource. When the request path matches one of the templates,
   the server will check if the user has the necessary permissions. It is important to note that when a request matches more than one RequestMatcher,
   the server will use the first added to the SecurityFilterChain. So, the order of the RequestMatchers is important.
+* The last rule is the **default rule** for every request that did not match any of the previous ones: `anyRequest().denyAll()`.
+  An endpoint without an explicit rule is denied (401 without a token, 403 with one). This is called *fail closed*: if you add an
+  endpoint and forget its rule, it is not accessible, instead of being silently open. For example, the `/moderator` endpoints answer 403
+  until you add their rules (see the TODO in `SecurityConfigurationAuthorization`).
 
 Path templates are strings that can contain wildcards. The wildcards are '*' and '**'. The '*' wildcard matches any character except the path separator
 while the '**' wildcard matches any character including the path separator. The path separator is the character '/' that separates the directories in the path.
@@ -164,6 +180,7 @@ The permissions are strings that represent the user's roles. We will give permis
 * requestMatchers("/hello").authenticated() will allow only authenticated users to access the resource '/hello' independently of their roles
 * requestMatchers("/hello").hasRole("USER") will allow only users with the role "USER" (authority `ROLE_USER`) to access the resource '/hello'
 * requestMatchers("/hello").hasAnyRole("USER", "ADMIN") will allow only users with the roles "USER" or "ADMIN" to access the resource '/hello'
+* anyRequest().denyAll() will deny every request that has not matched a previous rule. It must be the last rule
 Note that a user may have more than one role.
 
 The importance of the order of the RequestMatchers. If we have the following code,
@@ -173,6 +190,46 @@ The importance of the order of the RequestMatchers. If we have the following cod
     .requestMatchers("/helloUser").hasRole("USER"))
 ```
 All requests will be allowed because the first RequestMatcher matches all paths.
+
+## Method security
+URL rules can only use the path, the HTTP method and the user's roles. When the decision depends on the data of the request, we can check
+it in the method itself with `@PreAuthorize` (enabled by `@EnableMethodSecurity` in `SecurityConfigurationAuthorization`). In `APIController`:
+```java
+@GetMapping("/hello/{username}")
+@PreAuthorize("hasRole('ADMIN') or #username == authentication.name")
+public String helloUsername(@PathVariable String username) {
+    return "Hello " + username;
+}
+```
+An ADMIN can call `/hello/<anyone>`, and any other user only `/hello/<their own username>` (josep: `/hello/josep` → 200, `/hello/maria` → 403).
+`#username` is the method parameter and `authentication.name` is the `sub` of the token. The URL rule for `/hello/*` only requires
+the user to be authenticated: both checks apply, first the URL rule in the filter chain and then `@PreAuthorize` when the method is called.
+
+## Calling the API from a browser application (SPA)
+The server is prepared for a JavaScript application served from `http://localhost:5173` (CORS is allowed for that origin, also on `/token`).
+Keep the token **in memory** (a JavaScript variable), not in `localStorage` or `sessionStorage`: any script injected in the page (XSS)
+can read those storages. The drawback is that the token is lost when the page is reloaded, and the user must log in again.
+```js
+let accessToken = null;                         // in memory only
+
+async function login(username, password) {
+  const res = await fetch("http://localhost:8080/token", {
+    method: "POST",
+    headers: { Authorization: "Basic " + btoa(`${username}:${password}`) }
+  });
+  if (!res.ok) throw new Error("Login failed: " + res.status);   // 401: wrong username or password
+  accessToken = (await res.json()).access_token;
+}
+
+async function api(path) {
+  const res = await fetch("http://localhost:8080" + path, {
+    headers: { Authorization: `Bearer ${accessToken}` }
+  });
+  if (res.status === 401) accessToken = null;   // missing or expired token (15 minutes): log in again
+  return res;
+}
+```
+`btoa` only accepts Latin-1 characters: usernames or passwords with other characters must be UTF-8-encoded first.
 
 ## Spring Security Architecture
 Security is a cross-cutting concern, and it uses a filter that intercepts the requests to the server. You can see the
